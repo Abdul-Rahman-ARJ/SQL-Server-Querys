@@ -818,6 +818,5 @@ begin
 		insert into emp(empno,ename,job,sal) values (@emp_no,@emp_name,@emp_job,@emp_sal)	
 end
 
-exec dbo.AddEmp @emp_no=999,@emp_name='Deepa',@emp_job='clerk',@emp_sal=800
-
+exec dbo.AddEmp @emp_no=9919,@emp_name='Deepa',@emp_job='clerk',@emp_sal=800
 
