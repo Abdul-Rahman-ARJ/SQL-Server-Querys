@@ -125,11 +125,11 @@ use PracticeBatch
 
 -----------sal of clerks--------
 begin
-  select e.sal
-  into #v_saltab
+  select e.sal,e.job
+  into #v_saltab1
   from emp e
   where e.job='clerk'  
-  select * from #v_saltab
+  select * from #v_saltab1
 end;
 
 

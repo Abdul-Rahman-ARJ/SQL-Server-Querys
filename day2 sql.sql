@@ -540,11 +540,169 @@ and s.grade = T.grade and  d.deptno = e.deptno
 and d.loc != T.loc
 
 --List analysts and clerks who are either staying at Chicago or Boston and in grade 3 and above.
-select ename, job
+select ename, job, loc,grade
 from emp e, dept d, salgrade s
 where e.sal between losal and hisal
 and e.deptno = d.deptno
 and loc in ('chicago','boston')
+
+
+
+--How many employees are there between the highest grade of a clerk and the lowest grade of a manager?
+select e.ename, count(e.ename),grade
+from emp e, salgrade s
+where sal between losal and hisal
+and grade = (
+		select max(grade)
+		from emp e, salgrade s
+		where sal between losal and hisal
+		and job = 'CLERK'
+		)
+group by grade,e.ename
+
+
+
+
+select round(sal,-3)
+from emp
+
+--Write a query to display name, dept. no, and salary of any employee whose  is not located at DALLAS  but his/her salary and commission match with the   salary and commission of at least one  employee located in DALLAS.
+
+
+select ename, deptno,sal
+from emp
+where deptno != (
+	SELECT	deptno
+	from dept
+	where loc ='DALLAS'
+	)
+	and
+	sal + ISNULL(comm,0) in 
+	(
+	SELECT	sal + ISNULL(comm,0)
+	from dept
+	where loc ='DALLAS'
+	)
+
+
+--How much more salary does each person need to earn to go in the next grade?
+
+select ename, sal , sal - losal as NextGradeSal
+from emp e,salgrade s
+where sal between losal and hisal
+
+--List different locations from where employees are reporting to King.
+select loc
+from dept
+where deptno in
+(
+select deptno
+from emp
+where mgr = (
+select empno
+from emp
+where ename = 'KING'
+))
+
+--Display grade 2 employees in sales department who will complete 36 years in Dec this year.
+
+select ename, grade , hiredate
+from salgrade ,emp
+where sal between losal and hisal
+and grade >2
+and year(hiredate)+36 =2023 and month(hiredate) = 12
+
+select year(hiredate)+36, month(hiredate)
+from emp
+
+--Display employees who are earning salary more than the average salary of employees in the same grade.
+
+select ename, sal, T.avgsalbygrade
+from 
+(select  grade , round(avg(sal),2) as avgsalbygrade
+from salgrade ,emp
+where sal between losal and hisal
+group by grade)T, emp e, salgrade s
+where sal between losal and hisal
+and T.grade = s.grade
+and e.sal > T.avgsalbygrade
+
+--How many employees are there between the highest grade of a clerk and the lowest grade of a manager?
+
+
+select count(ename)
+from
+(select job, max(grade) as h_g_clerk
+from salgrade s,emp e
+where sal between losal and hisal
+and job = 'clerk'
+group by job)C_T,
+(select job, min(grade) as min_man
+from salgrade s,emp e
+where sal between losal and hisal
+and job = 'manager'
+group by job)M_T,emp e1,salgrade s1
+where e1.sal between losal and hisal
+and grade between C_T.h_g_clerk and M_T.min_man
+
+
+
+
+select * from salgrade
+
+--Display department name, grade, Max salary offered to each grade at each department.
+
+
+select dname,grade,T.hisal
+from (select d.deptno,grade, hisal
+from salgrade s,emp e,dept d
+where e.sal between s.losal and s.hisal
+and e.deptno = d.deptno
+group by d.deptno,grade,hisal)T,
+dept
+where dept.deptno = T.deptno
+
+--Who’s earning the best salary in each grade and where do they live?
+
+select ename,sal,salgrade.grade
+from (select grade, max(sal) as bestsal
+from emp , salgrade
+where sal between losal and hisal
+group by grade)T,emp,salgrade
+where sal = T.bestsal
+and salgrade.grade = T.grade
+
+--Display the locations where total salary of grade 3 employees is greater than total salary of grade 4 employee
+
+select loc,grade,sal +isnull(comm,0) as totalsal
+from emp e, dept d,salgrade
+where e.deptno = d.deptno
+and sal between losal and hisal
+and grade in (3,4)
+
+
+
+
+
+
+
+(select sum(sal) as G3_sal
+from emp e,salgrade s
+where sal between losal and hisal
+and grade = 3)
+
+(select sum(sal) as G4_sal
+from emp e,salgrade s
+where sal between losal and hisal
+and grade = 4)
+
+
+
+
+
+
+
+
 
 
 
@@ -697,7 +855,8 @@ END;
 BEGIN
 	DECLARE @ename VARCHAR(30), @job VARCHAR(15),@sal int,@bonus INT;
 	DECLARE EMP_CURSOR CURSOR 
-	FOR SELECT ename, sal,job
+	FOR
+	SELECT ename, sal,job
 	FROM EMP
 	OPEN EMP_CURSOR;
 	fetch NEXT
@@ -794,10 +953,6 @@ select * from emp
 create procedure AddEmp(@emp_no int,@emp_name varchar(20),@emp_sal int,@emp_job varchar(20))
 as 
 begin
-	--declare @emp_no int = 1111;
-	--declare @emp_sal int = 3000;
-	--declare @emp_job varchar(20) = 'MAAGER';
-	--declare @emp_name varchar(20) = 'Abdul';
 	declare @flag int = 0;
 	if(dbo.CheckEmpNo(@emp_no) != 0)
 	begin
@@ -818,5 +973,67 @@ begin
 		insert into emp(empno,ename,job,sal) values (@emp_no,@emp_name,@emp_job,@emp_sal)	
 end
 
-exec dbo.AddEmp @emp_no=9919,@emp_name='Deepa',@emp_job='clerk',@emp_sal=800
+exec dbo.AddEmp @emp_no=9999,@emp_name='Deepika',@emp_job='MANAGER',@emp_sal=8000
 
+update emp
+set deptno = 10
+where empno =9999
+
+use practiceDB
+
+alter procedure FireEmp(@emp_no int)
+as
+begin
+	if(dbo.CheckEmpNo(@emp_no) != 0)
+	begin
+		print 'Employee with ID ' + cast(@emp_no as varchar(20)) + ' Exists'
+		delete from emp where empno=@emp_no
+		print 'No. of rows deleted '+ cast(@@rowcount as varchar(20))
+	end
+	else
+		print 'Employee with ID ' + cast(@emp_no as varchar(20)) + ' Do not Exists'
+end
+
+exec dbo.FireEmp @emp_no = 1111
+
+
+--WAT which will prompt error message if anyopne tries to insert a recrds after working woring hrs other than 8 to 6
+create table empLog
+(
+logID int identity(1,1) not null,
+empid int not null,
+operation varchar(10) not null,
+updatedDate Datetime not null
+)
+ 
+select * from EmpLog
+ 
+create trigger trgEmployeeInsert
+on emp
+for insert
+as
+insert into emplog(empid,operation,updatedDate) 
+select empno,'Insert',getdate() from inserted
+
+exec dbo.AddEmp @emp_no=1234,@emp_name='Deepika',@emp_job='MANAGER',@emp_sal=8000
+
+
+alter trigger trgErrAfter
+on emp
+for insert
+as
+begin
+	if( DATEPART(HH,GETDATE()) >8 and  DATEPART(HH,GETDATE()) < 18 or DATEPART(DW,GETDATE()) = 1 or DATEPART(DW,GETDATE()) = 7 )
+		print 'Not allowed to insert'
+	else
+	begin
+		insert into emplog(empid,operation,updatedDate) 
+		select empno,'Insert',getdate() from inserted
+	end
+end
+
+
+select * from emp
+delete from emp where ename = 'Deepika'
+select * from EmpLog
+exec dbo.AddEmp @emp_no=1239,@emp_name='Deepika',@emp_job='MANAGER',@emp_sal=8000
